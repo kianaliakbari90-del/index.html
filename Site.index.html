@@ -1,0 +1,1028 @@
+```html
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نبض بازار | قیمت لحظه ای دلار، طلا و بازارهای جهانی</title>
+    <!-- Tailwind CSS برای استایل‌دهی مدرن -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- فونت زیبای وزیر متن از گوگل فونتز -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+    <!-- آیکون‌های فونت آسوم برای زیبایی بصری -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js برای نمودارهای تعاملی -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Vazirmatn', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#0B0F19',
+                            card: '#151D30',
+                            accent: '#F59E0B',
+                            emerald: '#10B981',
+                            rose: '#EF4444',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0B0F19;
+            color: #F3F4F6;
+            font-family: 'Vazirmatn', sans-serif;
+            overflow-x: hidden;
+        }
+        /* افکت‌های درخشش و نئون ملایم کارت‌ها */
+        .glass-card {
+            background: rgba(21, 29, 48, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            border-color: rgba(245, 158, 11, 0.3);
+            box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.05);
+            transform: translateY(-2px);
+        }
+        /* اسکرول بار شخصی‌سازی شده */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0F19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #24324F;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #F59E0B;
+        }
+        /* انیمیشن برای رفرش لایو */
+        @keyframes pulse-fast {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .live-dot {
+            animation: pulse-fast 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- نوتیفیکیشن‌های سفارشی برای هشدار قیمت -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full px-4 pointer-events-none"></div>
+
+    <!-- هدر سایت -->
+    <header class="border-b border-slate-800 bg-brand-dark/90 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- عنوان و لوگو -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                    <i class="fa-solid fa-chart-line text-brand-dark text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-l from-white to-amber-300 bg-clip-text text-transparent">نبض بازار مالی</h1>
+                    <p class="text-xs text-slate-400">سامانه هوشمند رصد لحظه‌ای بازار طلا، ارز و بازارهای جهانی</p>
+                </div>
+            </div>
+
+            <!-- وضعیت شبکه و ابزارهای هدر -->
+            <div class="flex items-center gap-4">
+                <!-- زمان زنده سیستم -->
+                <div class="hidden md:flex items-center gap-2 text-slate-400 text-sm bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-800/60">
+                    <i class="fa-regular fa-clock text-amber-500"></i>
+                    <span id="live-time">در حال بارگذاری...</span>
+                </div>
+
+                <!-- سوئیچ واحد پولی -->
+                <div class="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800">
+                    <button id="btn-toman" onclick="changeCurrencyUnit('toman')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-amber-500 text-slate-950">تومان</button>
+                    <button id="btn-rial" onclick="changeCurrencyUnit('rial')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all">ریال</button>
+                </div>
+
+                <!-- وضعیت لایو دیتابیس -->
+                <div class="flex items-center gap-2 text-xs text-emerald-500 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
+                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full live-dot"></span>
+                    <span class="hidden sm:inline">اتصال زنده برقرار است</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- نوار متحرک قیمت‌ها (Ticker) -->
+    <div class="bg-slate-950 border-b border-slate-900 py-2.5 overflow-hidden whitespace-nowrap">
+        <div class="max-w-7xl mx-auto px-4 flex items-center">
+            <span class="bg-amber-500/10 text-amber-500 text-xs font-bold px-2.5 py-1 rounded-md ml-4 flex items-center gap-1.5 shrink-0">
+                <i class="fa-solid fa-bolt"></i> نوسان امروز:
+            </span>
+            <div class="inline-flex gap-8 animate-[marquee_30s_linear_infinite] hover:[animation-play-state:paused] cursor-pointer text-xs text-slate-300" id="ticker-content">
+                <!-- به صورت داینامیک پر می‌شود -->
+                در حال بروزرسانی لحظه‌ای قیمت‌ها...
+            </div>
+        </div>
+    </div>
+
+    <!-- بدنه اصلی داشبورد -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- ستون سمت راست: جدول جزییات قیمت‌ها (۷ واحد عریض) -->
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                
+                <!-- کارت مدیریت دسته‌بندی‌ها -->
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-amber-500"></i>
+                                قیمت‌های زنده بازار
+                            </h2>
+                            <p class="text-xs text-slate-400 mt-1">نرخ‌ها هر چند ثانیه به صورت خودکار بروزرسانی می‌شوند</p>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button id="btn-manual-refresh" onclick="fetchLivePrices()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all shadow-md active:scale-95">
+                                <i id="refresh-icon" class="fa-solid fa-arrows-rotate"></i>
+                                بروزرسانی دستی
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- تب‌های دسته‌بندی -->
+                    <div class="flex border-b border-slate-800 mb-6 overflow-x-auto gap-2">
+                        <button onclick="switchTab('domestic')" id="tab-domestic" class="px-4 py-3 text-sm font-semibold border-b-2 border-amber-500 text-amber-500 transition-all shrink-0">
+                            <i class="fa-solid fa-landmark ml-1"></i> طلا و ارز داخلی
+                        </button>
+                        <button onclick="switchTab('global')" id="tab-global" class="px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white transition-all shrink-0">
+                            <i class="fa-solid fa-globe ml-1"></i> بازارهای جهانی
+                        </button>
+                        <button onclick="switchTab('crypto')" id="tab-crypto" class="px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white transition-all shrink-0">
+                            <i class="fa-brands fa-bitcoin ml-1"></i> ارزهای دیجیتال
+                        </button>
+                    </div>
+
+                    <!-- لیست قیمت‌ها -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right border-collapse">
+                            <thead>
+                                <tr class="text-xs text-slate-400 border-b border-slate-800/80 pb-3">
+                                    <th class="pb-3 font-medium">عنوان دارایی</th>
+                                    <th class="pb-3 font-medium text-left">قیمت فعلی</th>
+                                    <th class="pb-3 font-medium text-center">تغییر ۲۴ ساعت</th>
+                                    <th class="pb-3 font-medium text-left hidden sm:table-cell">کمترین / بیشترین</th>
+                                    <th class="pb-3 font-medium text-center">تحلیل</th>
+                                </tr>
+                            </thead>
+                            <tbody id="price-table-body" class="divide-y divide-slate-800/40 text-sm">
+                                <!-- به صورت داینامیک با جاوااسکریپت مقداردهی می‌شود -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ماشین حساب هوشمند ارز طلا -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-md font-bold text-white mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-calculator text-amber-500"></i>
+                        ماشین حساب پیشرفته تبدیل ارز
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-2">مقدار دلار آمریکا ($)</label>
+                            <div class="relative">
+                                <input type="number" id="calc-usd" oninput="calculateConvert('usd')" value="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-500 text-sm pl-10">
+                                <span class="absolute left-3 top-3 text-xs text-slate-500 font-bold">$</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-2">گرم طلای ۱۸ عیار</label>
+                            <div class="relative">
+                                <input type="number" id="calc-gold" oninput="calculateConvert('gold')" value="0" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-500 text-sm pl-10">
+                                <span class="absolute left-3 top-3 text-xs text-slate-500 font-bold">گرم</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-2">معادل پولی محاسباتی</label>
+                            <div class="relative">
+                                <input type="text" id="calc-result" readonly class="w-full bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5 text-amber-500 font-bold focus:outline-none text-sm text-left">
+                                <span id="calc-unit" class="absolute right-3 top-3 text-xs text-amber-500/70">تومان</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-3 text-left leading-relaxed">
+                        * محاسبات بر اساس آخرین نرخ استخراج شده سیستم در این صفحه انجام می‌گیرد.
+                    </p>
+                </div>
+            </div>
+
+            <!-- ستون سمت چپ: نمودار تعاملی و ابزارها (۵ واحد عریض) -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                
+                <!-- کارت نمودار روند قیمت -->
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-md font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-chart-area text-amber-500"></i>
+                                نمودار تعاملی قیمت‌ها
+                            </h3>
+                            <p class="text-[11px] text-slate-400" id="chart-subtitle">روند نوسانات دلار آمریکا در هفته گذشته</p>
+                        </div>
+                        <div class="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                            <button onclick="changeChartPeriod('1D')" id="period-1D" class="px-2 py-1 rounded text-[10px] font-bold text-slate-400 hover:text-white">۱ روز</button>
+                            <button onclick="changeChartPeriod('1W')" id="period-1W" class="px-2 py-1 rounded text-[10px] font-bold bg-amber-500 text-slate-950">۱ هفته</button>
+                            <button onclick="changeChartPeriod('1M')" id="period-1M" class="px-2 py-1 rounded text-[10px] font-bold text-slate-400 hover:text-white">۱ ماه</button>
+                        </div>
+                    </div>
+                    
+                    <!-- منوی انتخاب دارایی برای نمودار -->
+                    <div class="mb-4">
+                        <select id="chart-asset-select" onchange="updateChartFromSelect()" class="w-full bg-slate-900 text-xs text-white border border-slate-800 rounded-lg p-2.5 focus:outline-none focus:border-amber-500">
+                            <option value="USD">دلار آمریکا</option>
+                            <option value="GOLD18">طلای ۱۸ عیار</option>
+                            <option value="COIN">سکه امامی</option>
+                            <option value="BTC">بیت کوین (جهانی)</option>
+                            <option value="GOLD_GLOBAL">انس طلا (جهانی)</option>
+                        </select>
+                    </div>
+
+                    <!-- بخش بوم نقاشی نمودار -->
+                    <div class="h-64 relative">
+                        <canvas id="marketChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- فرم ثبت هشدار قیمت -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-md font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fa-regular fa-bell text-amber-500"></i>
+                        سیستم هوشمند هشدار قیمت
+                    </h3>
+                    <p class="text-xs text-slate-400 mb-4">وقتی قیمت دارایی به حد مشخص شده رسید، فورا مطلع شوید.</p>
+                    
+                    <form id="alert-form" onsubmit="registerPriceAlert(event)" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1.5">انتخاب دارایی</label>
+                                <select id="alert-asset" class="w-full bg-slate-900 text-xs text-white border border-slate-800 rounded-xl p-2.5 focus:outline-none focus:border-amber-500">
+                                    <option value="دلار آمریکا">دلار آمریکا</option>
+                                    <option value="طلای ۱۸ عیار">طلای ۱۸ عیار</option>
+                                    <option value="سکه امامی">سکه امامی</option>
+                                    <option value="بیت کوین">بیت کوین</option>
+                                    <option value="انس طلا">انس طلا</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1.5">شرط نوسان</label>
+                                <select id="alert-condition" class="w-full bg-slate-900 text-xs text-white border border-slate-800 rounded-xl p-2.5 focus:outline-none focus:border-amber-500">
+                                    <option value="above">بیشتر از (>)</option>
+                                    <option value="below">کمتر از (<)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1.5">قیمت هدف</label>
+                            <div class="relative">
+                                <input type="number" id="alert-price" placeholder="قیمت هدف را وارد کنید..." required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-amber-500 text-xs pl-12">
+                                <span class="absolute left-3 top-3 text-[10px] text-slate-500 font-bold" id="alert-price-unit">تومان</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95">
+                            <i class="fa-solid fa-bell-plus"></i>
+                            فعال‌سازی هشدار هوشمند
+                        </button>
+                    </form>
+
+                    <!-- لیست هشدارهای فعال ثبت شده -->
+                    <div class="mt-4 border-t border-slate-800 pt-4" id="active-alerts-container">
+                        <h4 class="text-xs font-bold text-slate-300 mb-2">هشدارهای فعال شما:</h4>
+                        <div id="alerts-list" class="space-y-2 max-h-32 overflow-y-auto pr-1">
+                            <!-- در صورت نبود هشدار پیامی نشان می‌دهد -->
+                            <p class="text-[11px] text-slate-500 text-center py-2">هیچ هشداری هنوز ثبت نشده است.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- بخش خبرخوان زنده اقتصادی -->
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-md font-bold text-white flex items-center gap-2">
+                            <i class="fa-regular fa-newspaper text-amber-500"></i>
+                            نبض خبر | تحولات بازار فوری
+                        </h3>
+                        <span class="text-[10px] text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md">پوشش ۲۴ ساعته</span>
+                    </div>
+                    <div class="space-y-4" id="news-container">
+                        <!-- خبرها توسط جاوااسکریپت لود خواهند شد -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- فوتر پایینی سایت -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 border-t border-slate-900 pt-8">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p class="text-xs text-slate-500 text-center md:text-right leading-loose">
+                تمامی قیمت‌ها از شبکه‌های معتبر اطلاع رسانی و صرافی‌های بین‌المللی واکشی شده‌اند. این وب‌سایت هیچگونه مسئولیتی در قبال سود یا زیان ناشی از معاملات شما نمی‌پذیرد.
+            </p>
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+                <span>توسعه یافته با <i class="fa-solid fa-heart text-rose-500"></i> در بستر وب</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- جاوااسکریپت و منطق کسب قیمت تعاملی -->
+    <script>
+        // بانک اطلاعات اولیه دارایی‌ها و داده‌های زنده بازار
+        let currencyUnit = 'toman'; // تومان یا ریال
+        let activeTab = 'domestic'; // domestic, global, crypto
+        let activePeriod = '1W'; // 1D, 1W, 1M
+        let marketChartInstance = null;
+        let priceAlerts = []; // هشدارهای ثبت شده توسط کاربر
+
+        // قیمت‌های پیش فرض بازار داخلی و جهانی (بروز شده بر اساس آخرین وضعیت)
+        const marketData = {
+            domestic: [
+                { id: 'usd', name: 'دلار آمریکا (آزاد)', symbol: '$', priceToman: 156500, change: 0.15, minToman: 155900, maxToman: 157300, isReal: false },
+                { id: 'eur', name: 'یورو اروپا', symbol: '€', priceToman: 169200, change: -0.32, minToman: 168100, maxToman: 170100, isReal: false },
+                { id: 'aed', name: 'درهم امارات', symbol: 'د.إ', priceToman: 42600, change: 0.08, minToman: 42300, maxToman: 42800, isReal: false },
+                { id: 'gold18', name: 'طلای ۱۸ عیار (هر گرم)', symbol: 'ط', priceToman: 1566420, change: 0.45, minToman: 1541000, maxToman: 1582000, isReal: false },
+                { id: 'coin_imami', name: 'سکه امامی طرح جدید', symbol: 'س', priceToman: 16049500, change: -0.12, minToman: 15990000, maxToman: 16180000, isReal: false },
+                { id: 'coin_bahar', name: 'سکه بهار آزادی طرح قدیم', symbol: 'س.ب', priceToman: 15504000, change: 0.00, minToman: 15450000, maxToman: 15600000, isReal: false },
+                { id: 'coin_quarter', name: 'ربع سکه بهار آزادی', symbol: 'ر.س', priceToman: 4950000, change: 1.25, minToman: 4890000, maxToman: 4990000, isReal: false }
+            ],
+            global: [
+                { id: 'gold_global', name: 'انس طلای جهانی', symbol: 'XAU', priceUSD: 4160.26, change: 0.14, minUSD: 4130.00, maxUSD: 4180.50, isReal: false },
+                { id: 'silver_global', name: 'انس نقره جهانی', symbol: 'XAG', priceUSD: 64.93, change: -0.09, minUSD: 63.80, maxUSD: 65.50, isReal: false },
+                { id: 'brent_oil', name: 'نفت برنت دریای شمال', symbol: 'OIL', priceUSD: 80.57, change: 0.24, minUSD: 79.50, maxUSD: 81.20, isReal: false },
+                { id: 'dax_index', name: 'شاخص داو جونز آمریکا', symbol: 'DJI', priceUSD: 39120.50, change: -0.55, minUSD: 38950, maxUSD: 39400, isReal: false },
+                { id: 'eur_usd', name: 'نرخ جفت ارز EUR/USD', symbol: 'EURUSD', priceUSD: 1.0825, change: 0.05, minUSD: 1.0780, maxUSD: 1.0860, isReal: false }
+            ],
+            crypto: [
+                { id: 'btc', name: 'بیت کوین', symbol: 'BTC', priceUSD: 63734.89, change: 1.09, minUSD: 62800, maxUSD: 64200, isReal: true },
+                { id: 'eth', name: 'اتریوم', symbol: 'ETH', priceUSD: 3452.12, change: 0.78, minUSD: 3390, maxUSD: 3510, isReal: true },
+                { id: 'usdt', name: 'تتر (دلار دیجیتال)', symbol: 'USDT', priceUSD: 1.0002, change: 0.01, minUSD: 0.9998, maxUSD: 1.0010, isReal: true },
+                { id: 'sol', name: 'سولانا', symbol: 'SOL', priceUSD: 145.67, change: -2.15, minUSD: 141.20, maxUSD: 149.80, isReal: true }
+            ]
+        };
+
+        // دیتای شبیه‌سازی برای نمودارها
+        const chartMockData = {
+            USD: {
+                '1D': [156100, 156300, 156050, 156400, 156200, 156500],
+                '1W': [154200, 154900, 155600, 156100, 155800, 156200, 156500],
+                '1M': [151000, 152500, 153000, 154500, 156000, 155000, 156500]
+            },
+            GOLD18: {
+                '1D': [1552000, 1558000, 1555000, 1562000, 1560000, 1566420],
+                '1W': [1510000, 1525000, 1538000, 1550000, 1545000, 1558000, 1566420],
+                '1M': [1480000, 1495000, 1510000, 1530000, 1540000, 1555000, 1566420]
+            },
+            COIN: {
+                '1D': [16020000, 16050000, 16010000, 16060000, 16035000, 16049500],
+                '1W': [15890000, 15920000, 15990000, 16080000, 16020000, 16060000, 16049500],
+                '1M': [15550000, 15700000, 15850000, 15900000, 16050000, 16020000, 16049500]
+            },
+            BTC: {
+                '1D': [63100, 63400, 62950, 63500, 63200, 63734],
+                '1W': [61200, 61900, 62400, 63100, 62800, 63500, 63734],
+                '1M': [59000, 60500, 61200, 62500, 63900, 62800, 63734]
+            },
+            GOLD_GLOBAL: {
+                '1D': [4145, 4155, 4148, 4162, 4158, 4160],
+                '1W': [4090, 4110, 4125, 4150, 4135, 4148, 4160],
+                '1M': [3980, 4020, 4050, 4110, 4130, 4120, 4160]
+            }
+        };
+
+        // خبرهای اقتصادی شبیه‌سازی شده
+        const economicNews = [
+            { id: 1, title: 'بانک مرکزی عرضه دور جدید سکه‌های طلای بهار آزادی را از دوشنبه آغاز می‌کند.', time: '۵ دقیقه قبل', tag: 'داخلی' },
+            { id: 2, title: 'قیمت طلای جهانی تحت تاثیر بیانیه اخیر فدرال رزرو رشد اندکی را تجربه کرد.', time: '۲۲ دقیقه قبل', tag: 'بین‌الملل' },
+            { id: 3, title: 'حجم معاملات رمز ارزها به بالاترین حد خود در دو ماه اخیر رسید.', time: '۱ ساعت قبل', tag: 'کریپتو' },
+            { id: 4, title: 'شاخص بورس تهران با بازپس‌گیری کانال حساسی روند رو به رشد خود را احیا کرد.', time: '۳ ساعت قبل', tag: 'داخلی' }
+        ];
+
+        // در شروع کار وب‌سایت
+        window.onload = function() {
+            updateLiveTime();
+            setInterval(updateLiveTime, 1000);
+            
+            fetchLivePrices(); // واکشی قیمت‌های زنده
+            initChart(); // ایجاد نمودار
+            renderNews(); // رندر اخبار مالی
+            
+            // دوره زمانی بروزرسانی خودکار کل سیستم (هر ۱۵ ثانیه یک‌بار)
+            setInterval(autoUpdateSystem, 15000);
+        }
+
+        // نمایش زمان زنده
+        function updateLiveTime() {
+            const timeSpan = document.getElementById('live-time');
+            const now = new Date();
+            timeSpan.innerText = now.toLocaleTimeString('fa-IR') + ' - ' + now.toLocaleDateString('fa-IR');
+        }
+
+        // سوئیچ تب دسته‌بندی‌ها
+        function switchTab(tabName) {
+            activeTab = tabName;
+            
+            // آپدیت ظاهر دکمه‌های تب
+            const tabs = ['domestic', 'global', 'crypto'];
+            tabs.forEach(tab => {
+                const btn = document.getElementById(`tab-${tab}`);
+                if (tab === tabName) {
+                    btn.className = "px-4 py-3 text-sm font-semibold border-b-2 border-amber-500 text-amber-500 transition-all shrink-0";
+                } else {
+                    btn.className = "px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white transition-all shrink-0";
+                }
+            });
+
+            renderPricesTable();
+        }
+
+        // قالب‌بندی اعداد به واحد پولی با کاما جداکننده
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        // رندر جدول اصلی بر بر اساس متغیرهای فعلی
+        function renderPricesTable() {
+            const tbody = document.getElementById('price-table-body');
+            tbody.innerHTML = '';
+
+            const list = marketData[activeTab];
+
+            list.forEach(item => {
+                let currentPriceStr = '';
+                let priceMinMaxStr = '';
+                let chartId = '';
+
+                // بر اساس تومان یا ریال و همچنین بازارهای جهانی تصمیم‌گیری می‌شود
+                if (activeTab === 'domestic') {
+                    const price = currencyUnit === 'toman' ? item.priceToman : item.priceToman * 10;
+                    const min = currencyUnit === 'toman' ? item.minToman : item.minToman * 10;
+                    const max = currencyUnit === 'toman' ? item.maxToman : item.maxToman * 10;
+                    const unitName = currencyUnit === 'toman' ? 'تومان' : 'ریال';
+
+                    currentPriceStr = `${formatNumber(price)} ${unitName}`;
+                    priceMinMaxStr = `<span class="text-rose-400">${formatNumber(min)}</span> / <span class="text-emerald-400">${formatNumber(max)}</span>`;
+                    chartId = item.id === 'usd' ? 'USD' : (item.id === 'gold18' ? 'GOLD18' : 'COIN');
+                } else {
+                    // تب‌های جهانی و کریپتو با ارز دلار نشان داده می‌شوند
+                    currentPriceStr = `$${formatNumber(item.priceUSD)}`;
+                    priceMinMaxStr = `<span class="text-rose-400">$${formatNumber(item.minUSD)}</span> / <span class="text-emerald-400">$${formatNumber(item.maxUSD)}</span>`;
+                    chartId = item.id === 'btc' ? 'BTC' : (item.id === 'gold_global' ? 'GOLD_GLOBAL' : 'USD');
+                }
+
+                // رنگ آیکون تغییر قیمت بر اساس افزایش یا کاهش
+                const changeClass = item.change > 0 ? 'text-emerald-500' : (item.change < 0 ? 'text-rose-500' : 'text-slate-400');
+                const changeIcon = item.change > 0 ? 'fa-caret-up' : (item.change < 0 ? 'fa-caret-down' : 'fa-minus');
+                const changeVal = `${Math.abs(item.change)}%`;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-900/40 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-4 font-semibold text-white flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-xs text-amber-500">
+                            ${getAssetIcon(item.id)}
+                        </span>
+                        <div>
+                            <span>${item.name}</span>
+                            <span class="text-[10px] text-slate-500 block font-normal">${item.symbol}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 font-bold text-left text-amber-500 font-mono">${currentPriceStr}</td>
+                    <td class="py-4 text-center">
+                        <span class="${changeClass} font-semibold flex items-center justify-center gap-1 font-mono text-xs">
+                            <i class="fa-solid ${changeIcon}"></i>
+                            ${changeVal}
+                        </span>
+                    </td>
+                    <td class="py-4 text-left font-mono text-xs hidden sm:table-cell">${priceMinMaxStr}</td>
+                    <td class="py-4 text-center">
+                        <button onclick="loadChartForAsset('${chartId}')" class="text-slate-400 hover:text-amber-500 transition-colors p-1" title="مشاهده نمودار و تحلیل">
+                            <i class="fa-solid fa-chart-line text-lg"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // برگرداندن آیکون متناسب با هر دارایی
+        function getAssetIcon(id) {
+            switch(id) {
+                case 'usd': return '<i class="fa-solid fa-dollar-sign"></i>';
+                case 'eur': return '<i class="fa-solid fa-euro-sign"></i>';
+                case 'aed': return '<i class="fa-solid fa-money-bill-wave"></i>';
+                case 'gold18': return '<i class="fa-solid fa-coins"></i>';
+                case 'coin_imami': return '<i class="fa-solid fa-circle-dot"></i>';
+                case 'coin_bahar': return '<i class="fa-solid fa-circle"></i>';
+                case 'coin_quarter': return '<i class="fa-solid fa-circle"></i>';
+                case 'gold_global': return '<i class="fa-solid fa-gem"></i>';
+                case 'silver_global': return '<i class="fa-solid fa-circle"></i>';
+                case 'brent_oil': return '<i class="fa-solid fa-droplet"></i>';
+                case 'dax_index': return '<i class="fa-solid fa-arrow-trend-up"></i>';
+                case 'eur_usd': return '<i class="fa-solid fa-scale-balanced"></i>';
+                case 'btc': return '<i class="fa-brands fa-bitcoin"></i>';
+                case 'eth': return '<i class="fa-brands fa-ethereum"></i>';
+                case 'usdt': return '<i class="fa-solid fa-dollar-sign text-emerald-500"></i>';
+                case 'sol': return '<i class="fa-solid fa-s"></i>';
+                default: return '<i class="fa-solid fa-wallet"></i>';
+            }
+        }
+
+        // رندر کردن نوار متحرک قیمت تیکر بالای صفحه
+        function renderTicker() {
+            const container = document.getElementById('ticker-content');
+            container.innerHTML = '';
+            
+            // ترکیبی از دارایی‌های برتر
+            const selectAssets = [
+                ...marketData.domestic.slice(0, 4),
+                ...marketData.global.slice(0, 1),
+                ...marketData.crypto.slice(0, 2)
+            ];
+
+            selectAssets.forEach(item => {
+                let priceStr = '';
+                if (item.priceToman) {
+                    const price = currencyUnit === 'toman' ? item.priceToman : item.priceToman * 10;
+                    priceStr = `${formatNumber(price)} ${currencyUnit === 'toman' ? 'تومان' : 'ریال'}`;
+                } else {
+                    priceStr = `$${formatNumber(item.priceUSD)}`;
+                }
+
+                const changeClass = item.change > 0 ? 'text-emerald-400' : 'text-rose-400';
+                const sign = item.change > 0 ? '▲' : '▼';
+
+                const span = document.createElement('span');
+                span.className = "inline-flex items-center gap-1.5 font-semibold";
+                span.innerHTML = `
+                    <span class="text-white">${item.name}:</span>
+                    <span class="text-amber-500 font-mono">${priceStr}</span>
+                    <span class="${changeClass} font-mono text-[10px]">${sign} ${Math.abs(item.change)}%</span>
+                    <span class="text-slate-700 mx-2">|</span>
+                `;
+                container.appendChild(span);
+            });
+        }
+
+        // تغییر واحد پولی سراسری سایت
+        function changeCurrencyUnit(unit) {
+            currencyUnit = unit;
+            
+            // مدیریت کلاس‌های دکمه سوئیچر در هدر
+            const btnToman = document.getElementById('btn-toman');
+            const btnRial = document.getElementById('btn-rial');
+            
+            if (unit === 'toman') {
+                btnToman.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-amber-500 text-slate-950";
+                btnRial.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all";
+                document.getElementById('calc-unit').innerText = 'تومان';
+                document.getElementById('alert-price-unit').innerText = 'تومان';
+            } else {
+                btnRial.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-amber-500 text-slate-950";
+                btnToman.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all";
+                document.getElementById('calc-unit').innerText = 'ریال';
+                document.getElementById('alert-price-unit').innerText = 'ریال';
+            }
+
+            renderPricesTable();
+            renderTicker();
+            calculateConvert('usd'); // بروزرسانی محاسبات مبدل ارز
+            
+            // بروزرسانی نمودار بر اساس واحد مالی جدید در صورت نیاز
+            const currentSelected = document.getElementById('chart-asset-select').value;
+            loadChartForAsset(currentSelected);
+        }
+
+        // واکشی زنده قیمت‌های صرافی‌های بین‌المللی برای کریپتو از بایننس
+        async function fetchLivePrices() {
+            const refreshIcon = document.getElementById('refresh-icon');
+            if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+            try {
+                // دریافت قیمت بیت‌کوین، اتریوم و سولانا از API عمومی بایننس بدون کلید
+                const [btcRes, ethRes, solRes] = await Promise.all([
+                    fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'),
+                    fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT'),
+                    fetch('https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT')
+                ]);
+
+                if (btcRes.ok) {
+                    const btcData = await btcRes.json();
+                    marketData.crypto[0].priceUSD = parseFloat(btcData.price);
+                }
+                if (ethRes.ok) {
+                    const ethData = await ethRes.json();
+                    marketData.crypto[1].priceUSD = parseFloat(ethData.price);
+                }
+                if (solRes.ok) {
+                    const solData = await solRes.json();
+                    marketData.crypto[3].priceUSD = parseFloat(solData.price);
+                }
+            } catch (err) {
+                // اگر مشکلی پیش آمد (مثلاً محدودیت شبکه یا آفلاین بودن) دیتای محلی به عنوان فال‌بک استفاده می‌شود
+                console.log("استفاده از مقادیر پیش‌فرض محلی به علت عدم امکان اتصال به سرور بین‌المللی.");
+            }
+
+            // اتمام چرخش دکمه رفرش
+            setTimeout(() => {
+                if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+            }, 800);
+
+            // نوسان کوچک شبیه‌سازی شده بازارها برای ایجاد حس پویایی زنده
+            simulatePriceFluctuations();
+
+            // بررسی شرط هشدارهای قیمت ثبت شده
+            checkPriceAlertsTrigger();
+
+            renderPricesTable();
+            renderTicker();
+            calculateConvert('usd');
+        }
+
+        // شبیه‌سازی هوشمند نوسان قیمت‌ها برای شبیه‌سازی لحظه‌ای
+        function simulatePriceFluctuations() {
+            // نوسان جزیی برای ارزهای داخلی و طلا
+            marketData.domestic.forEach(item => {
+                const percent = (Math.random() * 0.1 - 0.05); // نوسان بین -0.05% تا +0.05%
+                item.priceToman = Math.round(item.priceToman * (1 + percent / 100));
+                item.change = parseFloat((item.change + percent).toFixed(2));
+                if (item.priceToman < item.minToman) item.minToman = item.priceToman;
+                if (item.priceToman > item.maxToman) item.maxToman = item.priceToman;
+            });
+
+            // نوسان جزیی بازار جهانی
+            marketData.global.forEach(item => {
+                const percent = (Math.random() * 0.06 - 0.03);
+                item.priceUSD = parseFloat((item.priceUSD * (1 + percent / 100)).toFixed(2));
+                item.change = parseFloat((item.change + percent).toFixed(2));
+                if (item.priceUSD < item.minUSD) item.minUSD = item.priceUSD;
+                if (item.priceUSD > item.maxUSD) item.maxUSD = item.priceUSD;
+            });
+        }
+
+        // بروزرسانی خودکار کل سیستم برای پویایی بازارها
+        function autoUpdateSystem() {
+            fetchLivePrices();
+        }
+
+        // ماشین حساب تبدیل قیمت طلا و ارز
+        function calculateConvert(triggeredBy) {
+            const usdInput = document.getElementById('calc-usd');
+            const goldInput = document.getElementById('calc-gold');
+            const resultInput = document.getElementById('calc-result');
+
+            const usdRate = marketData.domestic[0].priceToman;
+            const goldRate = marketData.domestic[3].priceToman;
+
+            let finalTomanValue = 0;
+
+            if (triggeredBy === 'usd') {
+                const usdCount = parseFloat(usdInput.value) || 0;
+                finalTomanValue = usdCount * usdRate;
+                // مقداردهی طلا بر اساس ارزش دلاری معادل
+                goldInput.value = (finalTomanValue / goldRate).toFixed(2);
+            } else if (triggeredBy === 'gold') {
+                const goldGrams = parseFloat(goldInput.value) || 0;
+                finalTomanValue = goldGrams * goldRate;
+                // مقداردهی دلار بر اساس ارزش طلایی معادل
+                usdInput.value = (finalTomanValue / usdRate).toFixed(2);
+            }
+
+            // خروجی بر اساس تومان یا ریال
+            if (currencyUnit === 'toman') {
+                resultInput.value = formatNumber(Math.round(finalTomanValue));
+            } else {
+                resultInput.value = formatNumber(Math.round(finalTomanValue * 10));
+            }
+        }
+
+        // راه‌اندازی و مدیریت نمودار تعاملی Chart.js
+        function initChart() {
+            const ctx = document.getElementById('marketChart').getContext('2d');
+            
+            // دیتای دیفالت دلار برای نمودار اولیه
+            const initialLabels = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'امروز'];
+            const initialData = chartMockData.USD[activePeriod];
+
+            // ایجاد نمونه جدید چارت
+            marketChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: initialLabels,
+                    datasets: [{
+                        label: 'نرخ لحظه‌ای دارایی',
+                        data: initialData,
+                        borderColor: '#F59E0B',
+                        backgroundColor: 'rgba(245, 158, 11, 0.05)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#F59E0B',
+                        pointHoverRadius: 7,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            rtl: true,
+                            bodyFont: { family: 'Vazirmatn' },
+                            titleFont: { family: 'Vazirmatn' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.03)'
+                            },
+                            ticks: {
+                                color: '#94A3B8',
+                                font: { family: 'Vazirmatn', size: 10 }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#94A3B8',
+                                font: { family: 'Vazirmatn', size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // تغییر نمودار با کلیک روی نمادهای جدول
+        function loadChartForAsset(assetId) {
+            document.getElementById('chart-asset-select').value = assetId;
+            updateChartFromSelect();
+        }
+
+        // آپدیت کردن فواصل زمانی نمودار (۱ روز، ۱ هفته، ۱ ماه)
+        function changeChartPeriod(period) {
+            activePeriod = period;
+            
+            // مدیریت کلاس‌های فعال دکمه بازه زمانی
+            const periods = ['1D', '1W', '1M'];
+            periods.forEach(p => {
+                const btn = document.getElementById(`period-${p}`);
+                if (p === period) {
+                    btn.className = "px-2 py-1 rounded text-[10px] font-bold bg-amber-500 text-slate-950";
+                } else {
+                    btn.className = "px-2 py-1 rounded text-[10px] font-bold text-slate-400 hover:text-white";
+                }
+            });
+
+            updateChartFromSelect();
+        }
+
+        // بروزرسانی داده‌های داخل نمودار بر اساس سلکتور و بازه زمانی
+        function updateChartFromSelect() {
+            if (!marketChartInstance) return;
+
+            const selectedAsset = document.getElementById('chart-asset-select').value;
+            let rawData = chartMockData[selectedAsset][activePeriod];
+
+            // بر اساس واحد پولی تبدیل انجام می‌دهیم
+            let dataToShow = [...rawData];
+            let labelSuffix = '';
+
+            if (selectedAsset === 'USD' || selectedAsset === 'GOLD18' || selectedAsset === 'COIN') {
+                if (currencyUnit === 'rial') {
+                    dataToShow = rawData.map(val => val * 10);
+                    labelSuffix = 'ریال';
+                } else {
+                    labelSuffix = 'تومان';
+                }
+            } else {
+                labelSuffix = 'دلار آمریکا';
+            }
+
+            // بروزرسانی عناوین و توضیحات نمودار
+            const titles = {
+                USD: 'روند نوسانات دلار آمریکا',
+                GOLD18: 'روند نوسانات طلای ۱۸ عیار',
+                COIN: 'روند نوسانات سکه بهار آزادی طرح جدید',
+                BTC: 'روند نوسانات بیت‌کوین جهانی',
+                GOLD_GLOBAL: 'روند نوسانات اونس جهانی طلا'
+            };
+
+            const subtitles = {
+                '1D': 'تغییرات در بازه ۲۴ ساعته امروز',
+                '1W': 'تغییرات قیمت در هفته گذشته',
+                '1M': 'تغییرات قیمت در ۳۰ روز اخیر'
+            };
+
+            document.getElementById('chart-subtitle').innerText = `${titles[selectedAsset]} - ${subtitles[activePeriod]}`;
+
+            // برچسب‌های محور افقی
+            let labels = [];
+            if (activePeriod === '1D') {
+                labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
+            } else if (activePeriod === '1W') {
+                labels = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'امروز'];
+            } else {
+                labels = ['۱ام', '۵ام', '۱۰ام', '۱۵ام', '۲۰ام', '۲۵ام', '۳۰ام'];
+            }
+
+            // اعمال دیتای جدید به Chart.js
+            marketChartInstance.data.labels = labels;
+            marketChartInstance.data.datasets[0].data = dataToShow;
+            marketChartInstance.data.datasets[0].label = `نرخ بر اساس ${labelSuffix}`;
+            marketChartInstance.update();
+        }
+
+        // ثبت هشدار قیمت جدید توسط کاربر
+        function registerPriceAlert(event) {
+            event.preventDefault();
+            
+            const assetName = document.getElementById('alert-asset').value;
+            const condition = document.getElementById('alert-condition').value;
+            const targetPrice = parseFloat(document.getElementById('alert-price').value);
+
+            if (!targetPrice || targetPrice <= 0) return;
+
+            const newAlert = {
+                id: Date.now(),
+                assetName,
+                condition,
+                targetPrice,
+                unit: currencyUnit,
+                triggered: false
+            };
+
+            priceAlerts.push(newAlert);
+            document.getElementById('alert-form').reset();
+            
+            showToast(`سیستم هشدار`, `هشدار نوسان قیمت برای ${assetName} با موفقیت ثبت شد.`, 'info');
+            renderAlertsList();
+        }
+
+        // رندر لیست هشدارهای فعال کاربر
+        function renderAlertsList() {
+            const listContainer = document.getElementById('alerts-list');
+            listContainer.innerHTML = '';
+
+            if (priceAlerts.length === 0) {
+                listContainer.innerHTML = '<p class="text-[11px] text-slate-500 text-center py-2">هیچ هشداری هنوز ثبت نشده است.</p>';
+                return;
+            }
+
+            priceAlerts.forEach(alert => {
+                const conditionStr = alert.condition === 'above' ? 'بیشتر از' : 'کمتر از';
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 text-[11px]";
+                div.innerHTML = `
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-regular fa-bell text-amber-500"></i>
+                        <span class="font-bold text-white">${alert.assetName}</span>
+                        <span class="text-slate-400">${conditionStr}</span>
+                        <span class="text-amber-500 font-mono font-bold">${formatNumber(alert.targetPrice)} ${alert.unit === 'toman' ? 'تومان' : 'ریال'}</span>
+                    </div>
+                    <button onclick="removeAlert(${alert.id})" class="text-rose-500 hover:text-rose-400 transition-colors">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
+        // حذف یک هشدار از لیست هشدارهای فعال
+        function removeAlert(id) {
+            priceAlerts = priceAlerts.filter(alert => alert.id !== id);
+            renderAlertsList();
+            showToast('سیستم هشدار', 'هشدار قیمت با موفقیت لغو شد.', 'info');
+        }
+
+        // تحلیل و بررسی هوشمند هشدارها به صورت زنده
+        function checkPriceAlertsTrigger() {
+            priceAlerts.forEach(alert => {
+                if (alert.triggered) return;
+
+                // پیدا کردن قیمت دارایی بر اساس انتخاب کاربر
+                let currentMarketPrice = 0;
+
+                // نقشه‌برداری فیلدهای طلا و ارز داخلی و رمز ارزها به هشدار
+                if (alert.assetName === 'دلار آمریکا') {
+                    currentMarketPrice = alert.unit === 'toman' ? marketData.domestic[0].priceToman : marketData.domestic[0].priceToman * 10;
+                } else if (alert.assetName === 'طلای ۱۸ عیار') {
+                    currentMarketPrice = alert.unit === 'toman' ? marketData.domestic[3].priceToman : marketData.domestic[3].priceToman * 10;
+                } else if (alert.assetName === 'سکه امامی') {
+                    currentMarketPrice = alert.unit === 'toman' ? marketData.domestic[4].priceToman : marketData.domestic[4].priceToman * 10;
+                } else if (alert.assetName === 'بیت کوین') {
+                    currentMarketPrice = marketData.crypto[0].priceUSD; // بر اساس دلار جهانی محاسبه می‌شود
+                } else if (alert.assetName === 'انس طلا') {
+                    currentMarketPrice = marketData.global[0].priceUSD; // بر اساس دلار جهانی محاسبه می‌شود
+                }
+
+                const checkCondition = alert.condition === 'above' 
+                    ? (currentMarketPrice >= alert.targetPrice) 
+                    : (currentMarketPrice <= alert.targetPrice);
+
+                if (checkCondition) {
+                    alert.triggered = true;
+                    // لرزش زنگوله به نشان لایو
+                    showToast(
+                        '🔔 هشدار قیمت نهایی شد!', 
+                        `قیمت ${alert.assetName} به عدد ${formatNumber(currentMarketPrice)} رسید (هدف: ${formatNumber(alert.targetPrice)})`, 
+                        'warning'
+                    );
+                    
+                    // حذف بعد از تحریک شدن هشدار
+                    priceAlerts = priceAlerts.filter(a => a.id !== alert.id);
+                    renderAlertsList();
+                }
+            });
+        }
+
+        // رندر کردن اخبار لایو بازار مالی در صفحه
+        function renderNews() {
+            const container = document.getElementById('news-container');
+            container.innerHTML = '';
+
+            economicNews.forEach(news => {
+                const tagColor = news.tag === 'داخلی' ? 'bg-blue-500/10 text-blue-400' : (news.tag === 'کریپتو' ? 'bg-purple-500/10 text-purple-400' : 'bg-amber-500/10 text-amber-400');
+                
+                const div = document.createElement('div');
+                div.className = "flex gap-3 items-start border-b border-slate-900 pb-3 last:border-0 last:pb-0";
+                div.innerHTML = `
+                    <span class="px-2 py-0.5 rounded text-[9px] font-bold ${tagColor} shrink-0 mt-0.5">${news.tag}</span>
+                    <div class="flex-1">
+                        <h4 class="text-xs text-slate-200 font-semibold leading-relaxed hover:text-amber-500 transition-colors cursor-pointer">${news.title}</h4>
+                        <span class="text-[9px] text-slate-500 block mt-1"><i class="fa-regular fa-clock ml-0.5"></i> ${news.time}</span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // ایجاد نوتیفیکیشن اختصاصی روی صفحه بدون استفاده از توابع مزاحم مرورگر
+        function showToast(title, message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            
+            let typeClasses = 'bg-brand-card border-amber-500';
+            let icon = '<i class="fa-solid fa-circle-info text-amber-500"></i>';
+
+            if (type === 'warning') {
+                typeClasses = 'bg-brand-card border-emerald-500 shadow-emerald-500/5';
+                icon = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `glass-card border-r-4 ${typeClasses} p-4 rounded-xl shadow-xl flex gap-3 items-start pointer-events-auto transition-all duration-300 transform translate-y-2 opacity-0`;
+            
+            toast.innerHTML = `
+                <div class="text-lg">${icon}</div>
+                <div class="flex-1">
+                    <h5 class="text-xs font-bold text-white mb-1">${title}</h5>
+                    <p class="text-[11px] text-slate-300 leading-relaxed">${message}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-white transition-colors">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            // اجرای انیمیشن نمایش
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            // حذف خودکار پس از ۵ ثانیه
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
+
+```
